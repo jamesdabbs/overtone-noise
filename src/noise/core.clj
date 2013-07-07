@@ -15,23 +15,49 @@
 
 (defonce m (metronome 120))
 
+(def ax (ref piano)) ; The instrument of choice
+(def ts (ref 4))     ; Current time signature
+
+; This is a textbook dumb repeating drum pattern
 (defn oontz
-  "Dat beat"
+  "Oontz oontz oontz oontz"
   [beat]
   (at (m beat)         (kick))
   (at (m (+ 0.5 beat)) (c-hat))
   (at (m (+ 1   beat)) (snare))
   (at (m (+ 1.5 beat)) (c-hat))
-  (apply-at (m (+ 2 beat)) #'oontz (+ 2 beat) []))
+  (apply-at (m (+ 2 beat)) oontz (+ 2 beat) []))
 
-(def ax piano)
+; Q - how can I get a live count of the current metronome count / beat in-REPL?
+
+; TODO
+; - Make loops downbeat-aware and start in sync
+; - What about triggering a non-simple instrument e.g. (play-chord :c2 minor)
+;   - We could pass in '(play-chord :c2 :minor) and then eval it but ... gross
+; - Can we change the loop on the fly? What about the #'oontz syntax?
+(defmacro defloop
+  "A simple DSL for defining a looping pattern"
+  [fname length notes]
+  `(defn ~fname 
+    [beat#]
+    ; Queue up each individual beat-instrument pair
+    (doseq [[offset# instrument#] ~notes] (at (m (+ beat# offset#)) (instrument#)))
+    ; Repeat the loop
+    (apply-at (m (+ ~length beat#)) ~fname (+ ~length beat#) [])))
+
+(defloop oontz2 2
+  [[0   kick]
+   [0.5 c-hat]
+   [1   snare]
+   [1.5 c-hat]])
+
 
 ; Q: Why does this `doseq` work with `at` but `map ax` does not?
 (defn play-chord
   "Plays all notes in a chord simultaneously"
   [root name]
   (let [notes (rand-chord root name 7 36)]
-    (doseq [note notes] (ax note))))
+    (doseq [note notes] (@ax note))))
 
 (defn chopin
   "Some classy chords"
@@ -45,6 +71,7 @@
   (at (m (+ 24 beat)) (play-chord :g2  :major))
   (at (m (+ 28 beat)) (play-chord :c2  :minor))
   (apply-at (m (+ 32 beat)) #'chopin (+ 32 beat) []))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
