@@ -1,32 +1,81 @@
 (ns noise.core 
   (:use 
-    [overtone.live]))
+    [overtone.live]
+    [overtone.inst.piano]))
+
+; Just use some samples for now
+(defonce kick  (sample (freesound-path 171104)))
+(defonce snare (sample (freesound-path 26903)))
+(defonce c-hat (sample (freesound-path 802)))
+(defonce o-hat (sample (freesound-path 813)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Simple beat syncing sandbox ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defonce m (metronome 120))
+
+(defn oontz
+  "Dat beat"
+  [beat]
+  (at (m beat)         (kick))
+  (at (m (+ 0.5 beat)) (c-hat))
+  (at (m (+ 1   beat)) (snare))
+  (at (m (+ 1.5 beat)) (c-hat))
+  (apply-at (m (+ 2 beat)) #'oontz (+ 2 beat) []))
+
+(def ax piano)
+
+; Q: Why does this `doseq` work with `at` but `map ax` does not?
+(defn play-chord
+  "Plays all notes in a chord simultaneously"
+  [root name]
+  (let [notes (rand-chord root name 7 36)]
+    (doseq [note notes] (ax note))))
+
+(defn chopin
+  "Some classy chords"
+  [beat]
+  (at (m beat)        (play-chord :c2  :minor))
+  (at (m (+ 4 beat))  (play-chord :f2  :minor))
+  (at (m (+ 8 beat))  (play-chord :g2  :major))
+  (at (m (+ 12 beat)) (play-chord :c2  :minor))
+  (at (m (+ 16 beat)) (play-chord :ab2 :major))
+  (at (m (+ 20 beat)) (play-chord :db3 :major))
+  (at (m (+ 24 beat)) (play-chord :g2  :major))
+  (at (m (+ 28 beat)) (play-chord :c2  :minor))
+  (apply-at (m (+ 32 beat)) #'chopin (+ 32 beat) []))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TouchOSC Server setup ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Simple instrument controls
-(definst foo [freq 440 phase 0.0] (sin-osc freq phase))
+(definst foo
+  "Simple oscillator - something to bind to"
+  [freq 440 phase 0.0] 
+  (sin-osc freq phase))
 
 (defn adjust
+  "Adjusts an attribute on an instrument based on a TouchOSC message"
   [inst attr msg] 
   (let [
     rval (first (:args msg))
     sval (scale-range rval 0 1 50 1000)]
     (ctl inst attr sval)))
 
-; OSC server setup
-(defonce server (osc-server 44100 "osc-clj"))
-
-(defonce kick  (sample (freesound-path 171104)))
-(defonce snare (sample (freesound-path 26903)))
-(defonce c-hat (sample (freesound-path 802)))
-(defonce o-hat (sample (freesound-path 813)))
-
 ; ? better way to express conditional
 ; ? cutoff note on release
 (defn strike 
+  "Triggers an instrument on TouchOSC button press (but not release)"
   [inst]
   (fn [msg] 
     (if (= 1.0 (first (:args msg)))
       (inst))))
+
+; OSC server setup
+(defonce server (osc-server 44100 "osc-clj"))
 
 (defn clear-bindings []
   (map (partial osc-rm-handler server) [
