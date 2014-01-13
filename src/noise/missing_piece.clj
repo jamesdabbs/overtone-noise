@@ -30,7 +30,7 @@
 (play g1 (read-tab-line "3 8 10 12 ~ 10 12 13 12 ~ 17 ~ ~ 15 ~ 13 12 13 12 ~"))
 
 (defn tab-to-timed-chords
-  [tab]
+  [& tab]
   ; Group vertically, discard empty columns, attach timestamps, discard rests
   ; Just hardcode something for now to get the playing working:
   [[0 [0 2 2 -1 -1 -1]]
@@ -44,7 +44,20 @@
       (apply-at (m (+ beat offset))
                 guitar-strum [guitar chord]))))
 
-(play-tab g1 
+(def r1 (tab-to-timed-chords 
   "    7           10      12 - - 10 -       14 15 -"
   "  8   8 -    12    12 -                12        "
-  "8         10            13 - - 12 - 13           ")
+  "8         10            13 - - 12 - 13           "))
+
+(def r2 (tab-to-timed-chords
+  "                    3 - -                                                      "
+  "    0 2 - 0 2 3 2 -      5 - 3 2 3 2 -     0 2 - 0 2 3 2 - 5 - - 3 - 2         "
+  "  3                                      3                             3 - - - "
+  "3                                      3                                       "
+  "                                                                               "))
+
+(def r3 (tab-to-timed-chords
+  "    5 3 2 0 2 - -             5 7 5 7 -    5 3 2 0 2 - -         0 - -         "
+  "0 -               3 5 - - 3 -          0 -               3 0 - -       3 - - - "
+  "                                                                               "))
+
